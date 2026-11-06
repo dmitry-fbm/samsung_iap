@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:in_app_purchase_platform_interface/in_app_purchase_platform_interface.dart';
 
 import 'messages.g.dart';
+import 'purchase_mapping.dart';
+import 'samsung_iap_addition.dart';
 import 'types.dart';
 
 /// `in_app_purchase` platform implementation on top of Samsung IAP SDK 6.5.
@@ -17,7 +19,9 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
     SamsungIapHostApi? api,
     DateTime Function()? now,
   }) : _api = api ?? SamsungIapHostApi(),
-       _now = now ?? DateTime.now;
+       _now = now ?? DateTime.now {
+    InAppPurchasePlatformAddition.instance = SamsungIapPlatformAddition(this);
+  }
 
   /// `IAP_PAYMENT_IS_CANCELED` in the SDK's `HelperDefine`.
   static const samsungPaymentCanceled = 1;
@@ -26,7 +30,7 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
   static const samsungStatusOk = 0;
 
   /// [PurchaseVerificationData.source] and [IAPError.source].
-  static const source = 'samsung_iap';
+  static const source = samsungIapSource;
 
   static const _subscription = 'subscription';
 
@@ -38,13 +42,8 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
   }) {
     final platform = SamsungIapPlatform(mode: mode, api: api, now: now);
     InAppPurchasePlatform.instance = platform;
-    _registerAddition(platform);
     return platform;
   }
-
-  /// Hook for Task 4: set `InAppPurchasePlatformAddition.instance` to the
-  /// Samsung addition here. Intentionally empty until the addition exists.
-  static void _registerAddition(SamsungIapPlatform platform) {}
 
   final SamsungIapMode _mode;
   final SamsungIapHostApi _api;
@@ -161,7 +160,7 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
       if (purchase != null) {
         return consume
             ? await _consumed(api, purchase)
-            : _fromPurchase(purchase, PurchaseStatus.purchased);
+            : samsungPurchaseDetails(purchase, PurchaseStatus.purchased);
       }
       if (error == null) {
         return _failed(itemId, 'no_result', 'Payment returned no result');
@@ -185,7 +184,7 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
     SamsungIapHostApi api,
     PurchaseMsg purchase,
   ) async {
-    final details = _fromPurchase(purchase, PurchaseStatus.purchased);
+    final details = samsungPurchaseDetails(purchase, PurchaseStatus.purchased);
     final failure = await _settle(
       () => api.consumePurchasedItems([purchase.purchaseId]),
       purchase.purchaseId,
@@ -261,7 +260,7 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
     final now = _now();
     _purchases.add([
       for (final p in owned)
-        if (_isActive(p, now)) _fromPurchase(p, PurchaseStatus.restored),
+        if (_isActive(p, now)) samsungPurchaseDetails(p, PurchaseStatus.restored),
     ]);
     // Async delivery runs in a microtask; let it reach listeners before the
     // returned Future completes (the app counts what arrived after awaiting).
@@ -272,34 +271,9 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
   /// date parses and is in the past. Unknown end dates are left to the backend.
   bool _isActive(PurchaseMsg p, DateTime now) {
     if (p.type != _subscription) return true;
-    final end = _parseSamsungDate(p.subscriptionEndDate);
+    final end = parseSamsungDate(p.subscriptionEndDate);
     return end == null || !end.isBefore(now);
   }
-
-  static final _samsungDate = RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$');
-
-  /// Parses Samsung's `yyyy-MM-dd HH:mm:ss` as UTC; null if malformed.
-  static DateTime? _parseSamsungDate(String? value) =>
-      value != null && _samsungDate.hasMatch(value)
-      ? DateTime.tryParse('${value.replaceFirst(' ', 'T')}Z')
-      : null;
-
-  SamsungPurchaseDetails _fromPurchase(PurchaseMsg p, PurchaseStatus status) =>
-      SamsungPurchaseDetails(
-        productID: p.itemId,
-        purchaseID: p.purchaseId,
-        transactionDate:
-            _parseSamsungDate(p.purchaseDate)?.millisecondsSinceEpoch
-                .toString() ??
-            p.purchaseDate,
-        verificationData: PurchaseVerificationData(
-          localVerificationData: p.jsonString,
-          serverVerificationData: p.purchaseId,
-          source: source,
-        ),
-        status: status,
-        raw: p,
-      )..pendingCompletePurchase = !p.acknowledged;
 
   SamsungPurchaseDetails _noPurchase(String itemId, PurchaseStatus status) =>
       SamsungPurchaseDetails(

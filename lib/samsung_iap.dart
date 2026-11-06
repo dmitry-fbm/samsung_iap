@@ -9,5 +9,6 @@ export 'src/messages.g.dart'
         PurchaseMsg,
         PurchaseResultMsg,
         SamsungIapHostApi;
+export 'src/samsung_iap_addition.dart';
 export 'src/samsung_iap_platform.dart';
 export 'src/types.dart';
