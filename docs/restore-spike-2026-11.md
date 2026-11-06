@@ -56,6 +56,7 @@ Server-side state was cross-checked with Samsung's receipt API
 - **Payment methods.** The lifetime item offered PayPal; the subscription
   offered only a card, and the first sandbox subscription caused a real €0.15
   card-verification charge (not the €2.66 price).
+- **Cancellation is per account**: cancelling the subscription in Galaxy Store on one device showed it cancelled on the other device too.
 - **Consumable flag.** The purchase result has `mConsumableYN:"Y"` for the
   lifetime item; the owned list shows `"N"` once it is acknowledged.
 - **Dates.** `mPurchaseDate` is device-local (`2026-11-06 19:43:45`); the
