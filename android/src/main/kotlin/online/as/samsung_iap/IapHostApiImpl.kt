@@ -41,7 +41,8 @@ import org.json.JSONObject
  * The SDK swallows some failures (it logs and returns `false`, or returns nothing at all from
  * `getProductsDetails`) without ever calling the listener. Those paths are covered here: a Galaxy
  * Store pre-check before every non-payment store call, and a `false` return becomes an
- * `IAP_ERROR_COMMON` failure.
+ * `IAP_ERROR_COMMON` failure. Any exception thrown on the way (SDK, store check, mapper) is
+ * also reported as `IAP_ERROR_COMMON` in the same contract ([Once.guard]).
  */
 class IapHostApiImpl(
   context: Context,
@@ -71,103 +72,103 @@ class IapHostApiImpl(
     helper.setOperationMode(operationMode)
   }
 
-  override fun getProductsDetails(itemIdsCsv: String, callback: (Result<List<ProductMsg>>) -> Unit) {
-    val once = Once("getProductsDetails", callback)
-    if (!storeReady(once)) return
-    // Returns nothing: its only silent failure (invalid Galaxy Store) is pre-checked above.
-    helper.getProductsDetails(itemIdsCsv) { error, products ->
-      once.complete(error) { products.orEmpty().map(::productMsg) }
-    }
-  }
-
-  override fun getOwnedList(productType: String, callback: (Result<List<PurchaseMsg>>) -> Unit) {
-    val once = Once("getOwnedList", callback)
-    if (!storeReady(once)) return
-    val started =
-      helper.getOwnedList(productType) { error, owned ->
-        once.complete(error) { owned.orEmpty().map(::ownedPurchaseMsg) }
+  override fun getProductsDetails(itemIdsCsv: String, callback: (Result<List<ProductMsg>>) -> Unit) =
+    hostCall("getProductsDetails", callback).guard { once ->
+      if (!storeReady(once)) return@guard
+      // Returns nothing: its only silent failure (invalid Galaxy Store) is pre-checked above.
+      helper.getProductsDetails(itemIdsCsv) { error, products ->
+        once.complete(error) { products.orEmpty().map(::productMsg) }
       }
-    if (!started) once.fail(notStarted("getOwnedList"))
-  }
+    }
+
+  override fun getOwnedList(productType: String, callback: (Result<List<PurchaseMsg>>) -> Unit) =
+    hostCall("getOwnedList", callback).guard { once ->
+      if (!storeReady(once)) return@guard
+      val started =
+        helper.getOwnedList(productType) { error, owned ->
+          once.complete(error) { owned.orEmpty().map(::ownedPurchaseMsg) }
+        }
+      if (!started) once.fail(notStarted("getOwnedList"))
+    }
 
   override fun startPayment(
     itemId: String,
     obfuscatedAccountId: String?,
     obfuscatedProfileId: String?,
     callback: (Result<PurchaseResultMsg>) -> Unit,
-  ) {
-    val once = Once("startPayment", callback)
-    if (activityProvider() == null) return once.succeed(NO_ACTIVITY)
-    val accountId = obfuscatedId("obfuscatedAccountId", obfuscatedAccountId)
-    // The SDK refuses a profile id without an account id.
-    val profileId =
-      obfuscatedId("obfuscatedProfileId", obfuscatedProfileId)?.takeIf {
-        accountId != null || run {
-          Log.w(TAG, "startPayment: obfuscatedProfileId dropped (no valid obfuscatedAccountId)")
-          false
+  ) =
+    paymentCall("startPayment", callback).guard { once ->
+      if (activityProvider() == null) return@guard once.succeed(NO_ACTIVITY)
+      val accountId = obfuscatedId("obfuscatedAccountId", obfuscatedAccountId)
+      // The SDK refuses a profile id without an account id.
+      val profileId =
+        obfuscatedId("obfuscatedProfileId", obfuscatedProfileId)?.takeIf {
+          accountId != null || run {
+            Log.w(TAG, "startPayment: obfuscatedProfileId dropped (no valid obfuscatedAccountId)")
+            false
+          }
         }
-      }
-    val started =
-      helper.startPayment(itemId, accountId, profileId) { error, purchase ->
-        once.succeed(purchaseResult(error, purchase))
-      }
-    // False when another IAP operation is running or an argument is invalid; the listener is
-    // then never called.
-    if (!started) once.succeed(notStartedResult("startPayment"))
-  }
+      val started =
+        helper.startPayment(itemId, accountId, profileId) { error, purchase ->
+          once.guard { it.succeed(purchaseResult(error, purchase)) }
+        }
+      // False when another IAP operation is running or an argument is invalid; the listener is
+      // then never called.
+      if (!started) once.succeed(notStartedResult("startPayment"))
+    }
 
-  override fun acknowledgePurchases(purchaseIds: List<String>, callback: (Result<List<AckResultMsg>>) -> Unit) {
-    val once = Once("acknowledgePurchases", callback)
-    if (purchaseIds.isEmpty()) return once.succeed(emptyList())
-    if (!storeReady(once)) return
-    val started =
-      helper.acknowledgePurchases(purchaseIds.joinToString(",")) { error, results ->
-        once.complete(error) { results.orEmpty().map(::ackResultMsg) }
-      }
-    // Also false when Galaxy Store is older than 4.5.90 (no acknowledge support).
-    if (!started) once.fail(notStarted("acknowledgePurchases"))
-  }
+  override fun acknowledgePurchases(purchaseIds: List<String>, callback: (Result<List<AckResultMsg>>) -> Unit) =
+    hostCall("acknowledgePurchases", callback).guard { once ->
+      if (purchaseIds.isEmpty()) return@guard once.succeed(emptyList())
+      if (!storeReady(once)) return@guard
+      val started =
+        helper.acknowledgePurchases(purchaseIds.joinToString(",")) { error, results ->
+          once.complete(error) { results.orEmpty().map(::ackResultMsg) }
+        }
+      // Also false when Galaxy Store is older than 4.5.90 (no acknowledge support).
+      if (!started) once.fail(notStarted("acknowledgePurchases"))
+    }
 
-  override fun consumePurchasedItems(purchaseIds: List<String>, callback: (Result<List<AckResultMsg>>) -> Unit) {
-    val once = Once("consumePurchasedItems", callback)
-    if (purchaseIds.isEmpty()) return once.succeed(emptyList())
-    if (!storeReady(once)) return
-    val started =
-      helper.consumePurchasedItems(purchaseIds.joinToString(",")) { error, results ->
-        once.complete(error) { results.orEmpty().map(::ackResultMsg) }
-      }
-    if (!started) once.fail(notStarted("consumePurchasedItems"))
-  }
+  override fun consumePurchasedItems(purchaseIds: List<String>, callback: (Result<List<AckResultMsg>>) -> Unit) =
+    hostCall("consumePurchasedItems", callback).guard { once ->
+      if (purchaseIds.isEmpty()) return@guard once.succeed(emptyList())
+      if (!storeReady(once)) return@guard
+      val started =
+        helper.consumePurchasedItems(purchaseIds.joinToString(",")) { error, results ->
+          once.complete(error) { results.orEmpty().map(::ackResultMsg) }
+        }
+      if (!started) once.fail(notStarted("consumePurchasedItems"))
+    }
 
-  override fun getPromotionEligibility(itemIdsCsv: String, callback: (Result<String>) -> Unit) {
-    val once = Once("getPromotionEligibility", callback)
-    if (!storeReady(once)) return
-    val started =
-      helper.getPromotionEligibility(itemIdsCsv) { error, pricing ->
-        once.complete(error) { promotionJson(pricing.orEmpty()) }
-      }
-    if (!started) once.fail(notStarted("getPromotionEligibility"))
-  }
+  override fun getPromotionEligibility(itemIdsCsv: String, callback: (Result<String>) -> Unit) =
+    hostCall("getPromotionEligibility", callback).guard { once ->
+      if (!storeReady(once)) return@guard
+      val started =
+        helper.getPromotionEligibility(itemIdsCsv) { error, pricing ->
+          once.complete(error) { promotionJson(pricing.orEmpty()) }
+        }
+      if (!started) once.fail(notStarted("getPromotionEligibility"))
+    }
 
   override fun changeSubscriptionPlan(
     oldItemId: String,
     newItemId: String,
     prorationMode: String,
     callback: (Result<PurchaseResultMsg>) -> Unit,
-  ) {
-    val once = Once("changeSubscriptionPlan", callback)
-    if (activityProvider() == null) return once.succeed(NO_ACTIVITY)
-    val mode =
-      ProrationMode.entries.firstOrNull { it.name == prorationMode }
-        ?: return once.succeed(
-          errorResult(HelperDefine.IAP_ERROR_COMMON, "Unknown prorationMode: $prorationMode")
-        )
-    val started =
-      helper.changeSubscriptionPlan(oldItemId, newItemId, mode) { error, purchase ->
-        once.succeed(purchaseResult(error, purchase))
-      }
-    if (!started) once.succeed(notStartedResult("changeSubscriptionPlan"))
-  }
+  ) =
+    paymentCall("changeSubscriptionPlan", callback).guard { once ->
+      if (activityProvider() == null) return@guard once.succeed(NO_ACTIVITY)
+      val mode =
+        ProrationMode.entries.firstOrNull { it.name == prorationMode }
+          ?: return@guard once.succeed(
+            errorResult(HelperDefine.IAP_ERROR_COMMON, "Unknown prorationMode: $prorationMode")
+          )
+      val started =
+        helper.changeSubscriptionPlan(oldItemId, newItemId, mode) { error, purchase ->
+          once.guard { it.succeed(purchaseResult(error, purchase)) }
+        }
+      if (!started) once.succeed(notStartedResult("changeSubscriptionPlan"))
+    }
 
   /**
    * The SDK's own Galaxy Store check (installed, enabled, genuine, recent enough). When it fails
@@ -183,22 +184,39 @@ class IapHostApiImpl(
 
   /**
    * Completes [callback] exactly once, on the main thread. Later completions (an SDK listener
-   * firing twice) are logged and dropped.
+   * firing twice) are logged and dropped. An exception inside [guard] (SDK call, store check,
+   * VO mapper) is logged and completes the callback through [onException], so it never reaches
+   * Dart as a channel error nor leaves the Dart future pending.
    */
-  private class Once<T>(private val operation: String, private val callback: (Result<T>) -> Unit) {
+  private class Once<T>(
+    private val operation: String,
+    private val callback: (Result<T>) -> Unit,
+    private val onException: (String) -> Result<T>,
+  ) {
     private val done = AtomicBoolean(false)
 
     fun succeed(value: T) = finish(Result.success(value))
 
     fun fail(error: FlutterError) = finish(Result.failure(error))
 
+    /** Runs [block]; an exception from it completes the callback per the host-API contract. */
+    fun guard(block: (Once<T>) -> Unit) {
+      try {
+        block(this)
+      } catch (e: Exception) {
+        Log.e(TAG, "$operation threw", e)
+        finish(onException("$operation threw ${e.javaClass.simpleName}: ${e.message}"))
+      }
+    }
+
     /** Success from [value] when [error] is `IAP_ERROR_NONE`, otherwise a [FlutterError]. */
-    fun complete(error: ErrorVo?, value: () -> T) =
+    fun complete(error: ErrorVo?, value: () -> T) = guard {
       if (error != null && error.errorCode == HelperDefine.IAP_ERROR_NONE) {
         succeed(value())
       } else {
         fail(flutterError(error))
       }
+    }
 
     private fun finish(result: Result<T>) {
       if (!done.compareAndSet(false, true)) {
@@ -219,6 +237,14 @@ class IapHostApiImpl(
     const val NO_ERROR_OBJECT = "IapHelper returned no error object"
 
     val NO_ACTIVITY = errorResult(-1, "no activity")
+
+    /** Non-payment call: an exception fails the callback with `IAP_ERROR_COMMON` (-1002). */
+    fun <T> hostCall(operation: String, callback: (Result<T>) -> Unit) =
+      Once(operation, callback) { Result.failure(FlutterError("${HelperDefine.IAP_ERROR_COMMON}", it)) }
+
+    /** Payment call: an exception is returned as `ErrorMsg(IAP_ERROR_COMMON, ...)`, never a failure. */
+    fun paymentCall(operation: String, callback: (Result<PurchaseResultMsg>) -> Unit) =
+      Once(operation, callback) { Result.success(errorResult(HelperDefine.IAP_ERROR_COMMON, it)) }
 
     fun notStartedMessage(operation: String) = "$operation was not started by IapHelper (see logcat)"
 

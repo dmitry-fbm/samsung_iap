@@ -16,6 +16,8 @@ internal object SamsungValues {
   /**
    * Re-expresses an SDK date string, written in [local] time, in UTC with the same pattern.
    * Returns null if [value] does not match the pattern exactly.
+   * A local time in the DST fall-back hour is ambiguous, so it can be one hour off (inherent
+   * to the SDK's local-time string).
    */
   fun utcDate(value: String, local: TimeZone = TimeZone.getDefault()): String? {
     val parser =
