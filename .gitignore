@@ -31,6 +31,3 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 /build/
 /coverage/
-
-# Samsung IAP SDK AAR (licence not confirmed as redistributable; see README)
-android/libs-repo/

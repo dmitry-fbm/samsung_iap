@@ -18,8 +18,6 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        // File-based Maven repo holding the Samsung IAP SDK AAR (see README).
-        maven { url = uri("${projectDir}/libs-repo") }
     }
 }
 
@@ -75,5 +73,5 @@ kotlin {
 }
 
 dependencies {
-    implementation("com.samsung.android.iap:iap-sdk:6.5.0")
+    implementation("com.samsung.developer:iap:6.5.2")
 }
