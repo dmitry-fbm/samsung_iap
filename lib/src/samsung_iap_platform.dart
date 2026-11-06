@@ -130,14 +130,14 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
       SamsungPurchaseParam p => (p.obfuscatedAccountId, p.obfuscatedProfileId),
       _ => (param.applicationUserName, null),
     };
-    _purchases.add([_noPurchase(itemId, PurchaseStatus.pending)]);
+    _emit([_noPurchase(itemId, PurchaseStatus.pending)]);
     unawaited(
       _pay(
         itemId,
         accountId,
         profileId,
         consume: consume,
-      ).then((details) => _purchases.add([details])),
+      ).then((details) => _emit([details])),
     );
     return true;
   }
@@ -256,7 +256,7 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
   @override
   Future<void> restorePurchases({String? applicationUserName}) async {
     final owned = await (await readyHostApi()).getOwnedList('all');
-    _purchases.add([
+    _emit([
       for (final p in owned) samsungPurchaseDetails(p, PurchaseStatus.restored),
     ]);
     // Async delivery runs in a microtask; let it reach listeners before the
@@ -284,6 +284,14 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
   Future<String> countryCode() async =>
       throw UnimplementedError('countryCode() is not supported by Samsung IAP');
 
-  /// Closes [purchaseStream]. The platform must not be used afterwards.
+  /// Closes [purchaseStream]. The platform must not be used afterwards; a
+  /// payment still running at that point completes without being emitted.
   Future<void> dispose() => _purchases.close();
+
+  /// Adds to [purchaseStream] unless [dispose] already closed it, so an
+  /// in-flight payment finishing after [dispose] is dropped instead of
+  /// throwing an unhandled `StateError`.
+  void _emit(List<PurchaseDetails> purchases) {
+    if (!_purchases.isClosed) _purchases.add(purchases);
+  }
 }

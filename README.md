@@ -19,6 +19,11 @@ replaces this platform and connects Google Play billing. Construct `SamsungIapPl
 use it directly, one instance per app:
 
 ```dart
+// PurchaseParam, PurchaseStatus, etc. come from the platform interface, which
+// samsung_iap does not re-export: add it to your app's pubspec too.
+import 'package:in_app_purchase_platform_interface/in_app_purchase_platform_interface.dart';
+import 'package:samsung_iap/samsung_iap.dart';
+
 final iap = SamsungIapPlatform(mode: SamsungIapMode.production);
 iap.purchaseStream.listen((purchases) async {
   for (final p in purchases) {
@@ -56,8 +61,11 @@ await iap.buyNonConsumable(
   that ship to other stores, remove the permission in that flavour's manifest:
 
   ```xml
-  <uses-permission android:name="com.samsung.android.iap.permission.BILLING"
-      tools:node="remove" />
+  <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:tools="http://schemas.android.com/tools">
+      <uses-permission android:name="com.samsung.android.iap.permission.BILLING"
+          tools:node="remove" />
+  </manifest>
   ```
 
 - **Sandbox (`SamsungIapMode.test`).** Licence testers' item purchases are voided about

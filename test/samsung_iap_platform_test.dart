@@ -551,6 +551,18 @@ void main() {
     await platform.dispose();
     expect(await done, isEmpty);
   });
+
+  test('a payment finishing after dispose is dropped, not thrown', () async {
+    api.paymentResult = PurchaseResultMsg(purchase: _purchase());
+    await platform.buyNonConsumable(
+      purchaseParam: _param('online.as.safedrive.1m'),
+    );
+    await platform.dispose();
+    // Let the in-flight payment complete; an add-after-close would surface
+    // here as an unhandled async error and fail the test.
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+  });
 }
 
 /// Throws [error] from every host call except setOperationMode.
