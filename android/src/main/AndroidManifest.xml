@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="online.as.samsung_iap">
+  <uses-permission android:name="com.samsung.android.iap.permission.BILLING" />
+  <queries>
+    <!-- Galaxy Store, which hosts the IAP service. -->
+    <package android:name="com.sec.android.app.samsungapps" />
+  </queries>
+</manifest>
