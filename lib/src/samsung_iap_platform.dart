@@ -34,8 +34,9 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
   static SamsungIapPlatform register({
     SamsungIapMode mode = SamsungIapMode.production,
     SamsungIapHostApi? api,
+    DateTime Function()? now,
   }) {
-    final platform = SamsungIapPlatform(mode: mode, api: api);
+    final platform = SamsungIapPlatform(mode: mode, api: api, now: now);
     InAppPurchasePlatform.instance = platform;
     _registerAddition(platform);
     return platform;
@@ -48,9 +49,10 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
   final SamsungIapMode _mode;
   final SamsungIapHostApi _api;
   final DateTime Function() _now;
-  final _purchases = StreamController<List<PurchaseDetails>>.broadcast(
-    sync: true,
-  );
+
+  /// Asynchronous delivery: a listener may call buy*/restore from its
+  /// callback without a re-entrant add.
+  final _purchases = StreamController<List<PurchaseDetails>>.broadcast();
   Future<void>? _modeApplied;
 
   /// The host API, after the operation mode has been applied. For the
@@ -110,10 +112,15 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
     }
   }
 
+  /// Overlapping buys are not serialized: each call emits its own pending
+  /// and result updates.
   @override
   Future<bool> buyNonConsumable({required PurchaseParam purchaseParam}) =>
       _buy(purchaseParam, consume: false);
 
+  /// Overlapping buys are not serialized: each call emits its own pending
+  /// and result updates. With [autoConsume] the purchase is consumed before
+  /// its result is emitted.
   @override
   Future<bool> buyConsumable({
     required PurchaseParam purchaseParam,
@@ -256,6 +263,9 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
       for (final p in owned)
         if (_isActive(p, now)) _fromPurchase(p, PurchaseStatus.restored),
     ]);
+    // Async delivery runs in a microtask; let it reach listeners before the
+    // returned Future completes (the app counts what arrived after awaiting).
+    await Future<void>.delayed(Duration.zero);
   }
 
   /// Items are always active; a subscription is inactive only when its end

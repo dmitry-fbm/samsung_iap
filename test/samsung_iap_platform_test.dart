@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_purchase_platform_interface/in_app_purchase_platform_interface.dart';
@@ -13,6 +15,8 @@ class FakeHostApi extends SamsungIapHostApi {
   List<AckResultMsg>? ackResult;
   List<List<String>> acked = [];
   List<List<String>> consumed = [];
+  int modeFailures = 0;
+  int consumeStatus = 0;
 
   @override
   Future<bool> isAvailable() async {
@@ -23,6 +27,10 @@ class FakeHostApi extends SamsungIapHostApi {
   @override
   Future<void> setOperationMode(String mode) async {
     calls.add('setOperationMode:$mode');
+    if (modeFailures > 0) {
+      modeFailures--;
+      throw PlatformException(code: '-1000', message: 'not bound');
+    }
   }
 
   @override
@@ -67,7 +75,8 @@ class FakeHostApi extends SamsungIapHostApi {
     calls.add('consumePurchasedItems');
     consumed.add(purchaseIds);
     return [
-      for (final id in purchaseIds) AckResultMsg(purchaseId: id, statusCode: 0),
+      for (final id in purchaseIds)
+        AckResultMsg(purchaseId: id, statusCode: consumeStatus),
     ];
   }
 }
@@ -338,7 +347,7 @@ void main() {
       PlatformException(code: '-1001', message: 'network'),
     );
 
-    expect(
+    await expectLater(
       SamsungIapPlatform(api: failing).restorePurchases(),
       throwsA(isA<PlatformException>()),
     );
@@ -398,7 +407,7 @@ void main() {
       AckResultMsg(purchaseId: 'PID123', statusCode: 1, statusString: 'fail'),
     ];
 
-    expect(
+    await expectLater(
       platform.completePurchase(purchase),
       throwsA(isA<InAppPurchaseException>()),
     );
@@ -421,6 +430,84 @@ void main() {
       greaterThan(api.calls.indexWhere((c) => c.startsWith('startPayment'))),
     );
     expect(last.status, PurchaseStatus.purchased);
+  });
+
+  test('buyConsumable consume failure maps to error', () async {
+    api
+      ..consumeStatus = -1002
+      ..paymentResult = PurchaseResultMsg(
+        purchase: _purchase(type: 'item', purchaseId: 'C1'),
+      );
+    final updates = platform.purchaseStream.take(2).toList();
+
+    await platform.buyConsumable(purchaseParam: _param('x'));
+    final last = (await updates)[1].single;
+
+    expect(last.status, PurchaseStatus.error);
+    expect(last.error?.code, '-1002');
+    expect(last.pendingCompletePurchase, isFalse);
+    expect(last.purchaseID, 'C1');
+  });
+
+  test('listener may buy from its callback (no re-entrant add)', () async {
+    api.paymentResult = PurchaseResultMsg(
+      error: ErrorMsg(code: 1, message: 'canceled'),
+    );
+    final statuses = <PurchaseStatus>[];
+    final retried = Completer<bool>();
+    final sub = platform.purchaseStream.listen((list) {
+      statuses.addAll(list.map((p) => p.status));
+      if (list.single.status == PurchaseStatus.canceled &&
+          !retried.isCompleted) {
+        api.paymentResult = PurchaseResultMsg(purchase: _purchase());
+        retried.complete(platform.buyNonConsumable(purchaseParam: _param('x')));
+      }
+    });
+
+    await platform.buyNonConsumable(purchaseParam: _param('x'));
+    expect(await retried.future, isTrue);
+    await pumpEventQueue();
+    await sub.cancel();
+
+    expect(statuses, [
+      PurchaseStatus.pending,
+      PurchaseStatus.canceled,
+      PurchaseStatus.pending,
+      PurchaseStatus.purchased,
+    ]);
+  });
+
+  test('listener may buy upon a restored list', () async {
+    api.paymentResult = PurchaseResultMsg(purchase: _purchase());
+    final statuses = <PurchaseStatus>[];
+    Future<bool>? bought;
+    final sub = platform.purchaseStream.listen((list) {
+      statuses.addAll(list.map((p) => p.status));
+      if (list.isEmpty) {
+        bought = platform.buyNonConsumable(purchaseParam: _param('x'));
+      }
+    });
+
+    await platform.restorePurchases();
+    expect(await bought, isTrue);
+    await pumpEventQueue();
+    await sub.cancel();
+
+    expect(statuses, [PurchaseStatus.pending, PurchaseStatus.purchased]);
+  });
+
+  test('mode failure is retried on the next call', () async {
+    api.modeFailures = 1;
+    final p = SamsungIapPlatform(mode: SamsungIapMode.test, api: api);
+
+    expect(await p.isAvailable(), isFalse);
+    expect(await p.isAvailable(), isTrue);
+
+    expect(api.calls, [
+      'setOperationMode:test',
+      'setOperationMode:test',
+      'isAvailable',
+    ]);
   });
 
   test('isAvailable false when host says no store', () async {
