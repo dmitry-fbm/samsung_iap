@@ -1,8 +1,2 @@
-
-import 'samsung_iap_platform_interface.dart';
-
-class SamsungIap {
-  Future<String?> getPlatformVersion() {
-    return SamsungIapPlatform.instance.getPlatformVersion();
-  }
-}
+/// Samsung Galaxy Store IAP implementation of `in_app_purchase_platform_interface`.
+library;

@@ -9,7 +9,6 @@ buildscript {
     }
 
     dependencies {
-    implementation("com.samsung.android.iap:iap-sdk:6.5.0")
         classpath("com.android.tools.build:gradle:9.1.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     }
@@ -76,6 +75,5 @@ kotlin {
 }
 
 dependencies {
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.mockito:mockito-core:5.0.0")
+    implementation("com.samsung.android.iap:iap-sdk:6.5.0")
 }
