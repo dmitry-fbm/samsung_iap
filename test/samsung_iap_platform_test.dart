@@ -81,8 +81,6 @@ class FakeHostApi extends SamsungIapHostApi {
   }
 }
 
-final _now = DateTime.utc(2026, 11, 6, 12);
-
 ProductMsg _product(String id, {String type = 'subscription'}) => ProductMsg(
   itemId: id,
   itemName: 'SafeDrive 1 month',
@@ -130,7 +128,7 @@ void main() {
 
   setUp(() {
     api = FakeHostApi();
-    platform = SamsungIapPlatform(api: api, now: () => _now);
+    platform = SamsungIapPlatform(api: api);
   });
 
   test('is a valid InAppPurchasePlatform', () {
@@ -238,6 +236,22 @@ void main() {
     expect(last.error, isNull);
   });
 
+  test('already owned maps to error with code -1003', () async {
+    api.paymentResult = PurchaseResultMsg(
+      error: ErrorMsg(
+        code: SamsungIapPlatform.samsungAlreadyOwned,
+        message: 'Already purchased.',
+      ),
+    );
+    final updates = platform.purchaseStream.take(2).toList();
+
+    await platform.buyNonConsumable(purchaseParam: _param('x'));
+
+    final last = (await updates)[1].single;
+    expect(last.status, PurchaseStatus.error);
+    expect(last.error?.code, '-1003');
+  });
+
   test('other error maps to error', () async {
     api.paymentResult = PurchaseResultMsg(
       error: ErrorMsg(code: -1008, message: 'x'),
@@ -267,37 +281,15 @@ void main() {
     expect(last.error?.code, '-1000');
   });
 
-  test(
-    'restore emits owned items and active subscriptions as restored',
-    () async {
-      api.owned = [
-        _purchase(
-          itemId: 'online.as.safedrive.lifetime',
-          purchaseId: 'L1',
-          type: 'item',
-          acknowledged: true,
-        ),
-        _purchase(purchaseId: 'S1', subscriptionEndDate: '2026-12-06 12:00:00'),
-      ];
-      final emissions = <List<PurchaseDetails>>[];
-      final sub = platform.purchaseStream.listen(emissions.add);
-
-      await platform.restorePurchases();
-      await sub.cancel();
-
-      expect(emissions, hasLength(1));
-      expect(emissions.single, hasLength(2));
-      expect(
-        emissions.single.map((p) => p.status),
-        everyElement(PurchaseStatus.restored),
-      );
-      expect(api.calls, contains('getOwnedList:all'));
-    },
-  );
-
-  test('restore skips inactive subscriptions', () async {
+  test('restore emits owned items and subscriptions as restored', () async {
     api.owned = [
-      _purchase(purchaseId: 'OLD', subscriptionEndDate: '2026-11-06 11:59:59'),
+      _purchase(
+        itemId: 'online.as.safedrive.lifetime',
+        purchaseId: 'L1',
+        type: 'item',
+        acknowledged: true,
+      ),
+      _purchase(purchaseId: 'S1', subscriptionEndDate: '2026-12-06 12:00:00'),
     ];
     final emissions = <List<PurchaseDetails>>[];
     final sub = platform.purchaseStream.listen(emissions.add);
@@ -305,7 +297,27 @@ void main() {
     await platform.restorePurchases();
     await sub.cancel();
 
-    expect(emissions.single, isEmpty);
+    expect(emissions, hasLength(1));
+    expect(emissions.single, hasLength(2));
+    expect(
+      emissions.single.map((p) => p.status),
+      everyElement(PurchaseStatus.restored),
+    );
+    expect(api.calls, contains('getOwnedList:all'));
+  });
+
+  test('restore emits subscriptions past their end date', () async {
+    api.owned = [
+      _purchase(purchaseId: 'OLD', subscriptionEndDate: '2000-01-01 00:00:00'),
+    ];
+    final emissions = <List<PurchaseDetails>>[];
+    final sub = platform.purchaseStream.listen(emissions.add);
+
+    await platform.restorePurchases();
+    await sub.cancel();
+
+    expect(emissions.single.single.purchaseID, 'OLD');
+    expect(emissions.single.single.status, PurchaseStatus.restored);
   });
 
   test('restore emits subscription with unparseable end date', () async {
@@ -529,8 +541,15 @@ void main() {
     );
   });
 
-  test('countryCode is unimplemented', () {
-    expect(platform.countryCode, throwsUnimplementedError);
+  test('countryCode fails asynchronously', () async {
+    final result = platform.countryCode();
+    await expectLater(result, throwsUnimplementedError);
+  });
+
+  test('dispose closes the purchase stream', () async {
+    final done = platform.purchaseStream.toList();
+    await platform.dispose();
+    expect(await done, isEmpty);
   });
 }
 

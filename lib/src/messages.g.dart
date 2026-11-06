@@ -10,9 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:meta/meta.dart' show immutable, protected, visibleForTesting;
 
 Object? _extractReplyValueOrThrow(
-    List<Object?>? replyList,
-    String channelName, {
-    required bool isNullValid,
+  List<Object?>? replyList,
+  String channelName, {
+  required bool isNullValid,
 }) {
   if (replyList == null) {
     throw PlatformException(
@@ -46,8 +46,9 @@ bool _deepEquals(Object? a, Object? b) {
   }
   if (a is List && b is List) {
     return a.length == b.length &&
-        a.indexed
-            .every(((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]));
+        a.indexed.every(
+          ((int, dynamic) item) => _deepEquals(item.$2, b[item.$1]),
+        );
   }
   if (a is Map && b is Map) {
     if (a.length != b.length) {
@@ -95,7 +96,6 @@ int _deepHash(Object? value) {
   }
   return value.hashCode;
 }
-
 
 class ProductMsg {
   ProductMsg({
@@ -148,7 +148,8 @@ class ProductMsg {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static ProductMsg decode(Object result) {
     result as List<Object?>;
@@ -175,7 +176,19 @@ class ProductMsg {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(itemId, other.itemId) && _deepEquals(itemName, other.itemName) && _deepEquals(itemPriceString, other.itemPriceString) && _deepEquals(itemPrice, other.itemPrice) && _deepEquals(currencyCode, other.currencyCode) && _deepEquals(itemDesc, other.itemDesc) && _deepEquals(type, other.type) && _deepEquals(subscriptionDurationUnit, other.subscriptionDurationUnit) && _deepEquals(subscriptionDurationMultiplier, other.subscriptionDurationMultiplier) && _deepEquals(freeTrialPeriod, other.freeTrialPeriod);
+    return _deepEquals(itemId, other.itemId) &&
+        _deepEquals(itemName, other.itemName) &&
+        _deepEquals(itemPriceString, other.itemPriceString) &&
+        _deepEquals(itemPrice, other.itemPrice) &&
+        _deepEquals(currencyCode, other.currencyCode) &&
+        _deepEquals(itemDesc, other.itemDesc) &&
+        _deepEquals(type, other.type) &&
+        _deepEquals(subscriptionDurationUnit, other.subscriptionDurationUnit) &&
+        _deepEquals(
+          subscriptionDurationMultiplier,
+          other.subscriptionDurationMultiplier,
+        ) &&
+        _deepEquals(freeTrialPeriod, other.freeTrialPeriod);
   }
 
   @override
@@ -237,7 +250,8 @@ class PurchaseMsg {
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static PurchaseMsg decode(Object result) {
     result as List<Object?>;
@@ -265,7 +279,17 @@ class PurchaseMsg {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(itemId, other.itemId) && _deepEquals(purchaseId, other.purchaseId) && _deepEquals(paymentId, other.paymentId) && _deepEquals(orderId, other.orderId) && _deepEquals(purchaseDate, other.purchaseDate) && _deepEquals(type, other.type) && _deepEquals(acknowledged, other.acknowledged) && _deepEquals(subscriptionEndDate, other.subscriptionEndDate) && _deepEquals(obfuscatedAccountId, other.obfuscatedAccountId) && _deepEquals(obfuscatedProfileId, other.obfuscatedProfileId) && _deepEquals(jsonString, other.jsonString);
+    return _deepEquals(itemId, other.itemId) &&
+        _deepEquals(purchaseId, other.purchaseId) &&
+        _deepEquals(paymentId, other.paymentId) &&
+        _deepEquals(orderId, other.orderId) &&
+        _deepEquals(purchaseDate, other.purchaseDate) &&
+        _deepEquals(type, other.type) &&
+        _deepEquals(acknowledged, other.acknowledged) &&
+        _deepEquals(subscriptionEndDate, other.subscriptionEndDate) &&
+        _deepEquals(obfuscatedAccountId, other.obfuscatedAccountId) &&
+        _deepEquals(obfuscatedProfileId, other.obfuscatedProfileId) &&
+        _deepEquals(jsonString, other.jsonString);
   }
 
   @override
@@ -274,31 +298,23 @@ class PurchaseMsg {
 }
 
 class ErrorMsg {
-  ErrorMsg({
-    required this.code,
-    required this.message,
-  });
+  ErrorMsg({required this.code, required this.message});
 
   int code;
 
   String message;
 
   List<Object?> _toList() {
-    return <Object?>[
-      code,
-      message,
-    ];
+    return <Object?>[code, message];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static ErrorMsg decode(Object result) {
     result as List<Object?>;
-    return ErrorMsg(
-      code: result[0]! as int,
-      message: result[1]! as String,
-    );
+    return ErrorMsg(code: result[0]! as int, message: result[1]! as String);
   }
 
   @override
@@ -319,24 +335,19 @@ class ErrorMsg {
 }
 
 class PurchaseResultMsg {
-  PurchaseResultMsg({
-    this.purchase,
-    this.error,
-  });
+  PurchaseResultMsg({this.purchase, this.error});
 
   PurchaseMsg? purchase;
 
   ErrorMsg? error;
 
   List<Object?> _toList() {
-    return <Object?>[
-      purchase,
-      error,
-    ];
+    return <Object?>[purchase, error];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static PurchaseResultMsg decode(Object result) {
     result as List<Object?>;
@@ -355,7 +366,8 @@ class PurchaseResultMsg {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(purchase, other.purchase) && _deepEquals(error, other.error);
+    return _deepEquals(purchase, other.purchase) &&
+        _deepEquals(error, other.error);
   }
 
   @override
@@ -377,15 +389,12 @@ class AckResultMsg {
   String? statusString;
 
   List<Object?> _toList() {
-    return <Object?>[
-      purchaseId,
-      statusCode,
-      statusString,
-    ];
+    return <Object?>[purchaseId, statusCode, statusString];
   }
 
   Object encode() {
-    return _toList();  }
+    return _toList();
+  }
 
   static AckResultMsg decode(Object result) {
     result as List<Object?>;
@@ -405,14 +414,15 @@ class AckResultMsg {
     if (identical(this, other)) {
       return true;
     }
-    return _deepEquals(purchaseId, other.purchaseId) && _deepEquals(statusCode, other.statusCode) && _deepEquals(statusString, other.statusString);
+    return _deepEquals(purchaseId, other.purchaseId) &&
+        _deepEquals(statusCode, other.statusCode) &&
+        _deepEquals(statusString, other.statusString);
   }
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
 }
-
 
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
@@ -421,19 +431,19 @@ class _PigeonCodec extends StandardMessageCodec {
     if (value is int) {
       buffer.putUint8(4);
       buffer.putInt64(value);
-    }    else if (value is ProductMsg) {
+    } else if (value is ProductMsg) {
       buffer.putUint8(129);
       writeValue(buffer, value.encode());
-    }    else if (value is PurchaseMsg) {
+    } else if (value is PurchaseMsg) {
       buffer.putUint8(130);
       writeValue(buffer, value.encode());
-    }    else if (value is ErrorMsg) {
+    } else if (value is ErrorMsg) {
       buffer.putUint8(131);
       writeValue(buffer, value.encode());
-    }    else if (value is PurchaseResultMsg) {
+    } else if (value is PurchaseResultMsg) {
       buffer.putUint8(132);
       writeValue(buffer, value.encode());
-    }    else if (value is AckResultMsg) {
+    } else if (value is AckResultMsg) {
       buffer.putUint8(133);
       writeValue(buffer, value.encode());
     } else {
@@ -464,9 +474,13 @@ class SamsungIapHostApi {
   /// Constructor for [SamsungIapHostApi].  The [binaryMessenger] named argument is
   /// available for dependency injection.  If it is left null, the default
   /// BinaryMessenger will be used which routes to the host platform.
-  SamsungIapHostApi({BinaryMessenger? binaryMessenger, String messageChannelSuffix = ''})
-      : pigeonVar_binaryMessenger = binaryMessenger,
-        pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+  SamsungIapHostApi({
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) : pigeonVar_binaryMessenger = binaryMessenger,
+       pigeonVar_messageChannelSuffix = messageChannelSuffix.isNotEmpty
+           ? '.$messageChannelSuffix'
+           : '';
   final BinaryMessenger? pigeonVar_binaryMessenger;
 
   static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
@@ -474,7 +488,8 @@ class SamsungIapHostApi {
   final String pigeonVar_messageChannelSuffix;
 
   Future<bool> isAvailable() async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.isAvailable$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.isAvailable$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
@@ -484,166 +499,193 @@ class SamsungIapHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as bool;
   }
 
   /// 'production' | 'test' | 'test_failure'
   Future<void> setOperationMode(String mode) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.setOperationMode$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.setOperationMode$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[mode]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[mode],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: true,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: true,
+    );
   }
 
   /// '' = all
   Future<List<ProductMsg>> getProductsDetails(String itemIdsCsv) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.getProductsDetails$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.getProductsDetails$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[itemIdsCsv]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[itemIdsCsv],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return (pigeonVar_replyValue! as List<Object?>).cast<ProductMsg>();
   }
 
   /// 'item' | 'subscription' | 'all'
   Future<List<PurchaseMsg>> getOwnedList(String productType) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.getOwnedList$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.getOwnedList$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[productType]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[productType],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return (pigeonVar_replyValue! as List<Object?>).cast<PurchaseMsg>();
   }
 
-  Future<PurchaseResultMsg> startPayment(String itemId, String? obfuscatedAccountId, String? obfuscatedProfileId) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.startPayment$pigeonVar_messageChannelSuffix';
+  Future<PurchaseResultMsg> startPayment(
+    String itemId,
+    String? obfuscatedAccountId,
+    String? obfuscatedProfileId,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.startPayment$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[itemId, obfuscatedAccountId, obfuscatedProfileId]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[itemId, obfuscatedAccountId, obfuscatedProfileId],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as PurchaseResultMsg;
   }
 
-  Future<List<AckResultMsg>> acknowledgePurchases(List<String> purchaseIds) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.acknowledgePurchases$pigeonVar_messageChannelSuffix';
+  Future<List<AckResultMsg>> acknowledgePurchases(
+    List<String> purchaseIds,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.acknowledgePurchases$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[purchaseIds]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[purchaseIds],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return (pigeonVar_replyValue! as List<Object?>).cast<AckResultMsg>();
   }
 
-  Future<List<AckResultMsg>> consumePurchasedItems(List<String> purchaseIds) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.consumePurchasedItems$pigeonVar_messageChannelSuffix';
+  Future<List<AckResultMsg>> consumePurchasedItems(
+    List<String> purchaseIds,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.consumePurchasedItems$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[purchaseIds]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[purchaseIds],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return (pigeonVar_replyValue! as List<Object?>).cast<AckResultMsg>();
   }
 
   /// Raw JSON passthrough.
   Future<String> getPromotionEligibility(String itemIdsCsv) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.getPromotionEligibility$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.getPromotionEligibility$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[itemIdsCsv]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[itemIdsCsv],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as String;
   }
 
-  Future<PurchaseResultMsg> changeSubscriptionPlan(String oldItemId, String newItemId, String prorationMode) async {
-    final pigeonVar_channelName = 'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.changeSubscriptionPlan$pigeonVar_messageChannelSuffix';
+  Future<PurchaseResultMsg> changeSubscriptionPlan(
+    String oldItemId,
+    String newItemId,
+    String prorationMode,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.samsung_iap.SamsungIapHostApi.changeSubscriptionPlan$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[oldItemId, newItemId, prorationMode]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(
+      <Object?>[oldItemId, newItemId, prorationMode],
+    );
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
-        pigeonVar_replyList,
-        pigeonVar_channelName,
-        isNullValid: false,
-    )
-    ;
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
     return pigeonVar_replyValue! as PurchaseResultMsg;
   }
 }

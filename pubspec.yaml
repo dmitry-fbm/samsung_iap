@@ -1,17 +1,16 @@
 name: samsung_iap
 description: "Samsung Galaxy Store IAP (IAP SDK 6.5) implementation of in_app_purchase_platform_interface. Android only."
-version: 0.0.1
-homepage:
+version: 0.1.0
+repository: https://github.com/dmitry-fbm/samsung_iap
 
 environment:
   sdk: ^3.13.0
-  flutter: '>=3.3.0'
+  flutter: '>=3.47.0'
 
 dependencies:
   flutter:
     sdk: flutter
   in_app_purchase_platform_interface: ^1.4.1
-  plugin_platform_interface: ^2.0.2
 
 dev_dependencies:
   flutter_test:

@@ -13,18 +13,28 @@ import 'types.dart';
 /// Error convention: non-payment host calls throw [PlatformException] whose
 /// code is Samsung's errorCode; payment calls report failure as an [ErrorMsg]
 /// inside [PurchaseResultMsg].
+///
+/// Use an instance directly. Do not go through `InAppPurchase.instance`: on
+/// Android it registers the Google Play platform in place of this one.
 class SamsungIapPlatform extends InAppPurchasePlatform {
+  /// Creates the platform for [mode].
+  ///
+  /// Construction installs this instance's [SamsungIapPlatformAddition] as
+  /// the global `InAppPurchasePlatformAddition.instance` (the last one
+  /// constructed wins), so create one per app.
   SamsungIapPlatform({
     this._mode = SamsungIapMode.production,
     SamsungIapHostApi? api,
-    DateTime Function()? now,
-  }) : _api = api ?? SamsungIapHostApi(),
-       _now = now ?? DateTime.now {
+  }) : _api = api ?? SamsungIapHostApi() {
     InAppPurchasePlatformAddition.instance = SamsungIapPlatformAddition(this);
   }
 
   /// `IAP_PAYMENT_IS_CANCELED` in the SDK's `HelperDefine`.
   static const samsungPaymentCanceled = 1;
+
+  /// `IAP_ERROR_ALREADY_PURCHASED` in the SDK's `HelperDefine`: the item is
+  /// already owned. Treat it as owned and run [restorePurchases].
+  static const samsungAlreadyOwned = -1003;
 
   /// `IAP_ERROR_NONE`: success status of acknowledge/consume results.
   static const samsungStatusOk = 0;
@@ -32,22 +42,8 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
   /// [PurchaseVerificationData.source] and [IAPError.source].
   static const source = samsungIapSource;
 
-  static const _subscription = 'subscription';
-
-  /// Registers a Samsung platform as the `in_app_purchase` implementation.
-  static SamsungIapPlatform register({
-    SamsungIapMode mode = SamsungIapMode.production,
-    SamsungIapHostApi? api,
-    DateTime Function()? now,
-  }) {
-    final platform = SamsungIapPlatform(mode: mode, api: api, now: now);
-    InAppPurchasePlatform.instance = platform;
-    return platform;
-  }
-
   final SamsungIapMode _mode;
   final SamsungIapHostApi _api;
-  final DateTime Function() _now;
 
   /// Asynchronous delivery: a listener may call buy*/restore from its
   /// callback without a re-entrant add.
@@ -252,27 +248,20 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
     }
   }
 
-  /// Emits the owned list (always exactly one list, possibly empty) before
-  /// completing. Host failures are rethrown.
+  /// Emits every owned purchase as `restored` (always exactly one list,
+  /// possibly empty) before completing. Host failures are rethrown.
+  ///
+  /// Subscriptions are included even past their end date: the owned list
+  /// lags expiry, so entitlement must come from your backend.
   @override
   Future<void> restorePurchases({String? applicationUserName}) async {
     final owned = await (await readyHostApi()).getOwnedList('all');
-    final now = _now();
     _purchases.add([
-      for (final p in owned)
-        if (_isActive(p, now)) samsungPurchaseDetails(p, PurchaseStatus.restored),
+      for (final p in owned) samsungPurchaseDetails(p, PurchaseStatus.restored),
     ]);
     // Async delivery runs in a microtask; let it reach listeners before the
     // returned Future completes (the app counts what arrived after awaiting).
     await Future<void>.delayed(Duration.zero);
-  }
-
-  /// Items are always active; a subscription is inactive only when its end
-  /// date parses and is in the past. Unknown end dates are left to the backend.
-  bool _isActive(PurchaseMsg p, DateTime now) {
-    if (p.type != _subscription) return true;
-    final end = parseSamsungDate(p.subscriptionEndDate);
-    return end == null || !end.isBefore(now);
   }
 
   SamsungPurchaseDetails _noPurchase(String itemId, PurchaseStatus status) =>
@@ -290,8 +279,11 @@ class SamsungIapPlatform extends InAppPurchasePlatform {
       _noPurchase(itemId, PurchaseStatus.error)
         ..error = IAPError(source: source, code: code, message: message);
 
-  /// The app never asks the store for a country.
+  /// Not supported: completes with an [UnimplementedError].
   @override
-  Future<String> countryCode() =>
+  Future<String> countryCode() async =>
       throw UnimplementedError('countryCode() is not supported by Samsung IAP');
+
+  /// Closes [purchaseStream]. The platform must not be used afterwards.
+  Future<void> dispose() => _purchases.close();
 }

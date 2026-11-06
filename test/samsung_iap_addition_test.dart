@@ -41,8 +41,8 @@ PurchaseMsg _purchase() => PurchaseMsg(
   jsonString: '{}',
 );
 
-Future<SamsungPurchaseDetails> _change(SamsungIapPlatformAddition a) =>
-    a.changeSubscriptionPlan(oldItemId: 'o', newItemId: 'n', prorationMode: 'm');
+Future<SamsungPurchaseDetails> _change(SamsungIapPlatformAddition a) => a
+    .changeSubscriptionPlan(oldItemId: 'o', newItemId: 'n', prorationMode: 'm');
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

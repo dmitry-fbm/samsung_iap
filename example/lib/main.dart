@@ -164,7 +164,10 @@ class _SpikePageState extends State<SpikePage> {
                     value: SamsungIapMode.production,
                     label: Text('production'),
                   ),
-                  ButtonSegment(value: SamsungIapMode.test, label: Text('test')),
+                  ButtonSegment(
+                    value: SamsungIapMode.test,
+                    label: Text('test'),
+                  ),
                 ],
                 selected: {_mode},
                 onSelectionChanged: (s) => _setMode(s.first),

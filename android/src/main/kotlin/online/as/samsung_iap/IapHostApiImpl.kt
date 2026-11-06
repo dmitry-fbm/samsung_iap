@@ -54,6 +54,11 @@ class IapHostApiImpl(
   /** Process-wide singleton; it holds the operation mode set by [setOperationMode]. */
   private val helper: IapHelper by lazy { IapHelper.getInstance(appContext) }
 
+  /**
+   * Galaxy Store is installed and enabled. Deliberately not `HelperUtil.isGalaxyStoreValid`, which
+   * can show a Galaxy Store dialog; so this can be true while store calls fail with
+   * `IAP_ERROR_INITIALIZATION` (-1000), e.g. when Galaxy Store is outdated.
+   */
   override fun isAvailable(): Boolean =
     try {
       appContext.packageManager.getApplicationInfo(GALAXY_STORE_PACKAGE, 0).enabled
@@ -173,6 +178,9 @@ class IapHostApiImpl(
   /**
    * The SDK's own Galaxy Store check (installed, enabled, genuine, recent enough). When it fails
    * the SDK shows its guidance dialog and would skip the listener, so the call is failed here.
+   *
+   * `HelperUtil` is an undocumented SDK util (verified in 6.5.2, the pinned version): re-verify
+   * its behaviour on any SDK version bump.
    */
   private fun storeReady(once: Once<*>): Boolean {
     if (HelperUtil.isGalaxyStoreValid(appContext)) return true

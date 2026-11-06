@@ -1,3 +1,3 @@
-## 0.0.1
+## 0.1.0
 
-* TODO: Describe initial release.
+* Initial release: `in_app_purchase` platform for Samsung Galaxy Store over Samsung IAP SDK 6.5.2.
