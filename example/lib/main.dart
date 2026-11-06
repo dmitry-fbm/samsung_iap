@@ -76,7 +76,9 @@ class _SpikePageState extends State<SpikePage> {
       );
       if (p is SamsungPurchaseDetails) {
         final raw = p.raw;
-        if (raw != null) _say('  raw=${raw.encode()}');
+        // The SDK's own purchase JSON: carries fields the backend cares about
+        // (e.g. receipt mode) that the mapped PurchaseDetails drop.
+        if (raw != null) _say('  json=${raw.jsonString}');
       }
     }
     setState(() {
