@@ -98,12 +98,21 @@ class IapHostApiImpl(
   ) {
     val once = Once("startPayment", callback)
     if (activityProvider() == null) return once.succeed(NO_ACTIVITY)
+    val accountId = obfuscatedId("obfuscatedAccountId", obfuscatedAccountId)
+    // The SDK refuses a profile id without an account id.
+    val profileId =
+      obfuscatedId("obfuscatedProfileId", obfuscatedProfileId)?.takeIf {
+        accountId != null || run {
+          Log.w(TAG, "startPayment: obfuscatedProfileId dropped (no valid obfuscatedAccountId)")
+          false
+        }
+      }
     val started =
-      helper.startPayment(itemId, obfuscatedAccountId, obfuscatedProfileId) { error, purchase ->
+      helper.startPayment(itemId, accountId, profileId) { error, purchase ->
         once.succeed(purchaseResult(error, purchase))
       }
-    // False when another IAP operation is running or an argument is invalid (e.g. an
-    // obfuscated id over 64 chars or in e-mail form); the listener is then never called.
+    // False when another IAP operation is running or an argument is invalid; the listener is
+    // then never called.
     if (!started) once.succeed(notStartedResult("startPayment"))
   }
 
@@ -242,12 +251,12 @@ class IapHostApiImpl(
         itemId = p.itemId.orEmpty(),
         itemName = p.itemName.orEmpty(),
         itemPriceString = p.itemPriceString.orEmpty(),
-        itemPrice = p.itemPrice ?: 0.0,
+        itemPrice = p.itemPrice,
         currencyCode = p.currencyCode.orEmpty(),
         itemDesc = p.itemDesc.orEmpty(),
         type = p.type.orEmpty(),
         subscriptionDurationUnit = p.subscriptionDurationUnit.nullIfEmpty(),
-        subscriptionDurationMultiplier = p.subscriptionDurationMultiplier?.trim()?.toLongOrNull(),
+        subscriptionDurationMultiplier = p.subscriptionDurationMultiplier.trim().toLongOrNull(),
         freeTrialPeriod = p.freeTrialPeriod.nullIfEmpty(),
       )
 
@@ -258,7 +267,7 @@ class IapHostApiImpl(
         purchaseId = p.purchaseId.orEmpty(),
         paymentId = p.paymentId.orEmpty(),
         orderId = p.orderId.orEmpty(),
-        purchaseDate = p.purchaseDate.orEmpty(),
+        purchaseDate = utcDate(p.purchaseDate.orEmpty()),
         type = p.type.orEmpty(),
         acknowledged = false,
         obfuscatedAccountId = p.obfuscatedAccountId.nullIfEmpty(),
@@ -276,10 +285,10 @@ class IapHostApiImpl(
         purchaseId = p.purchaseId.orEmpty(),
         paymentId = p.paymentId.orEmpty(),
         orderId = "",
-        purchaseDate = p.purchaseDate.orEmpty(),
+        purchaseDate = utcDate(p.purchaseDate.orEmpty()),
         type = p.type.orEmpty(),
         acknowledged = p.acknowledgedStatus != AcknowledgedStatus.NOT_ACKNOWLEDGED,
-        subscriptionEndDate = p.subscriptionEndDate.nullIfEmpty(),
+        subscriptionEndDate = p.subscriptionEndDate.nullIfEmpty()?.let(::utcDate),
         obfuscatedAccountId = p.obfuscatedAccountId.nullIfEmpty(),
         obfuscatedProfileId = p.obfuscatedProfileId.nullIfEmpty(),
         jsonString = p.jsonString.orEmpty(),
@@ -308,5 +317,22 @@ class IapHostApiImpl(
         .toString()
 
     fun String?.nullIfEmpty(): String? = if (isNullOrEmpty()) null else this
+
+    /** An SDK date (device local time) in UTC; passed through unchanged if it doesn't parse. */
+    fun utcDate(local: String): String =
+      if (local.isEmpty()) {
+        local
+      } else {
+        SamsungValues.utcDate(local) ?: local.also { Log.w(TAG, "Unparsable SDK date passed through: $local") }
+      }
+
+    /** [id], or null (with a warning) when the SDK would refuse it and fail the payment. */
+    fun obfuscatedId(name: String, id: String?): String? =
+      id.nullIfEmpty()?.takeIf {
+        SamsungValues.isValidObfuscatedId(it) || run {
+          Log.w(TAG, "startPayment: $name dropped (e-mail form or over 64 chars)")
+          false
+        }
+      }
   }
 }
