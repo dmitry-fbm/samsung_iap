@@ -12,6 +12,7 @@ class SamsungIapPlugin : FlutterPlugin, ActivityAware {
 
   override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     binding = flutterPluginBinding
+    SdkActivityWatcher.install(flutterPluginBinding.applicationContext)
     SamsungIapHostApi.setUp(
       flutterPluginBinding.binaryMessenger,
       IapHostApiImpl(flutterPluginBinding.applicationContext) { activity },

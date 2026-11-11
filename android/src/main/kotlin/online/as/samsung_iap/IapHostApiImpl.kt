@@ -246,13 +246,29 @@ class IapHostApiImpl(
 
     val NO_ACTIVITY = errorResult(-1, "no activity")
 
+    /** The payment screen went away without a result; the user left it, so it maps to cancel. */
+    val ABANDONED =
+      errorResult(HelperDefine.IAP_PAYMENT_IS_CANCELED, "payment screen closed without a result")
+
     /** Non-payment call: an exception fails the callback with `IAP_ERROR_COMMON` (-1002). */
     fun <T> hostCall(operation: String, callback: (Result<T>) -> Unit) =
       Once(operation, callback) { Result.failure(FlutterError("${HelperDefine.IAP_ERROR_COMMON}", it)) }
 
-    /** Payment call: an exception is returned as `ErrorMsg(IAP_ERROR_COMMON, ...)`, never a failure. */
-    fun paymentCall(operation: String, callback: (Result<PurchaseResultMsg>) -> Unit) =
-      Once(operation, callback) { Result.success(errorResult(HelperDefine.IAP_ERROR_COMMON, it)) }
+    /**
+     * Payment call: an exception is returned as `ErrorMsg(IAP_ERROR_COMMON, ...)`, never a failure.
+     * While open it is registered with [SdkActivityWatcher], which reports it as cancelled if the
+     * payment screen is destroyed without a result (see [AbandonedPaymentRecovery]).
+     */
+    fun paymentCall(operation: String, callback: (Result<PurchaseResultMsg>) -> Unit): Once<PurchaseResultMsg> {
+      val recovery = SdkActivityWatcher.recovery
+      val once =
+        Once<PurchaseResultMsg>(operation, { result ->
+          recovery.paymentFinished()
+          callback(result)
+        }) { Result.success(errorResult(HelperDefine.IAP_ERROR_COMMON, it)) }
+      recovery.paymentStarted { once.succeed(ABANDONED) }
+      return once
+    }
 
     fun notStartedMessage(operation: String) = "$operation was not started by IapHelper (see logcat)"
 
